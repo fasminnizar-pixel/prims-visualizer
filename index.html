@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prim's MST Visualizer — BCS 309 Algorithms 
+    
+    
+  </title>
+  <style>
+    /* ───────────────── RESET & BASE ───────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root{
+      --bg:#0b0e14;
+      --surf1:#111620;
+      --surf2:#161d2a;
+      --surf3:#1d2738;
+      --border:#263045;
+      --accent:#00c9a0;
+      --orange:#ff6b35;
+      --yellow:#f5a623;
+      --blue:#4a9eff;
+      --purple:#9b72ef;
+      --green:#3ecf6e;
+      --red:#f05151;
+      --text:#dde4f0;
+      --muted:#5a6a84;
+      --dim:#8899b0;
+      --mono:'Courier New', Courier, monospace;
+    }
+
+    body{
+      font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      min-height:100vh;
+      overflow-x:hidden;
+    }
+
+    /* ───────────────── HEADER ───────────────── */
+    header{
+      background:var(--surf1);
+      border-bottom:1px solid var(--border);
+      padding:12px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      position:sticky;
+      top:0;
+      z-index:200;
+    }
+
+    header h1{
+      font-size:1.1rem;
+      font-weight:700;
+      letter-spacing:-.01em;
+    }
+
+    header h1 span{ color:var(--accent); }
+
+    .hdr-right{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      font-size:.78rem;
+      font-family:var(--mono);
+    }
+
+    .status-pill{
+      padding:3px 12px;
+      border-radius:99px;
+      font-size:.68rem;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+      border:1px solid;
+      transition:all .3s;
+    }
+
+    .sp-idle{ color:var(--muted); border-color:var(--border); }
+    .sp-ready{ color:var(--accent); border-color:var(--accent); }
+    .sp-playing{ color:var(--green); border-color:var(--green); animation:blink 1s infinite; }
+    .sp-paused{ color:var(--yellow); border-color:var(--yellow); }
+    .sp-done{ color:var(--purple); border-color:var(--purple); }
+
+    @keyframes blink{
+      0%,100%{opacity:1}
+      50%{opacity:.5}
+    }
+
+    /* ───────────────── MAIN LAYOUT ───────────────── */
+    .main{
+      display:grid;
+      grid-template-columns:420px 1fr;
+      height:calc(100vh - 49px);
+    }
+
+    @media (max-width:980px){
+      .main{
+        grid-template-columns:1fr;
+        height:auto;
+      }
+    }
+
+    /* ───────────────── LEFT PANEL ───────────────── */
+    .left{
+      background:var(--surf1);
+      border-right:1px solid var(--border);
+      overflow-y:auto;
+    }
+
+    .left::-webkit-scrollbar{ width:4px; }
+    .left::-webkit-scrollbar-thumb{ background:var(--border); }
+
+    .sec{
+      border-bottom:1px solid var(--border);
+      padding:14px 16px;
+    }
+
+    .sec-lbl{
+      font-size:.62rem;
+      font-weight:700;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:10px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-family:var(--mono);
+    }
+
+    .sec-lbl::after{
+      content:'';
+      flex:1;
+      height:1px;
+      background:var(--border);
+    }
+
+    textarea#custom-input{
+      width:100%;
+      background:var(--surf2);
+      border:1px solid var(--border);
+      color:var(--text);
+      font-family:var(--mono);
+      font-size:.73rem;
+      padding:9px 11px;
+      border-radius:7px;
+      resize:vertical;
+      min-height:88px;
+      outline:none;
+      line-height:1.65;
+      transition:border-color .2s;
+    }
+
+    textarea#custom-input:focus{ border-color:var(--accent); }
+
+    .hint{
+      font-size:.63rem;
+      color:var(--muted);
+      margin-top:5px;
+      font-family:var(--mono);
+      line-height:1.55;
+    }
+
+    .sv-row{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      margin-top:8px;
+    }
+
+    .sv-row label{
+      font-size:.73rem;
+      color:var(--dim);
+      white-space:nowrap;
+    }
+
+    select.sml{
+      flex:1;
+      background:var(--surf2);
+      border:1px solid var(--border);
+      color:var(--text);
+      font-family:var(--mono);
+      font-size:.73rem;
+      padding:5px 8px;
+      border-radius:6px;
+      outline:none;
+      cursor:pointer;
+    }
+
+    .load-btn{
+      padding:6px 13px;
+      background:var(--accent);
+      border:none;
+      border-radius:6px;
+      color:#000;
+      font-weight:700;
+      font-size:.72rem;
+      cursor:pointer;
+      white-space:nowrap;
+      transition:background .15s;
+    }
+
+    .load-btn:hover{ background:#00f0c0; }
+
+    .presets{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+    }
+
+    .pre-btn{
+      background:var(--surf2);
+      border:1px solid var(--border);
+      color:var(--dim);
+      font-size:.72rem;
+      font-weight:600;
+      padding:8px 10px;
+      border-radius:7px;
+      cursor:pointer;
+      text-align:left;
+      transition:all .15s;
+      line-height:1.35;
+    }
+
+    .pre-btn:hover{
+      border-color:var(--accent);
+      color:var(--accent);
+      background:rgba(0,201,160,.06);
+    }
+
+    .pre-tag{
+      display:block;
+      font-size:.58rem;
+      color:var(--muted);
+      font-family:var(--mono);
+      margin-top:2px;
+    }
+
+    .spd-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .spd-row label{
+      font-size:.72rem;
+      color:var(--dim);
+      white-space:nowrap;
+      min-width:52px;
+    }
+
+    input[type=range]{
+      flex:1;
+      height:4px;
+      -webkit-appearance:none;
+      background:var(--surf3);
+      border-radius:2px;
+      outline:none;
+      cursor:pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb{
+      -webkit-appearance:none;
+      width:13px;
+      height:13px;
+      border-radius:50%;
+      background:var(--accent);
+      cursor:pointer;
+      transition:transform .15s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover{ transform:scale(1.25); }
+
+    .spd-val{
+      font-family:var(--mono);
+      font-size:.72rem;
+      color:var(--accent);
+      font-weight:700;
+      min-width:28px;
+      text-align:right;
+    }
+
+    .ctrl-grid{
+      display:flex;
+      gap:5px;
+      flex-wrap:wrap;
+    }
+
+    .cbtn{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      padding:8px 10px;
+      border-radius:7px;
+      font-size:.71rem;
+      font-weight:700;
+      cursor:pointer;
+      border:1px solid var(--border);
+      transition:all .15s;
+      white-space:nowrap;
+    }
+
+    .cbtn-primary{
+      background:var(--accent);
+      border-color:var(--accent);
+      color:#000;
+    }
+
+    .cbtn-primary:hover{ background:#00f0c0; }
+
+    .cbtn-sec{
+      background:var(--surf2);
+      color:var(--dim);
+    }
+
+    .cbtn-sec:hover{
+      border-color:var(--accent);
+      color:var(--accent);
+    }
+
+    .cbtn-danger{
+      background:var(--surf2);
+      color:var(--red);
+      border-color:rgba(240,81,81,.3);
+    }
+
+    .cbtn-danger:hover{
+      background:rgba(240,81,81,.08);
+      border-color:var(--red);
+    }
+
+    .cbtn:disabled{
+      opacity:.4;
+      cursor:not-allowed;
+    }
+
+    .step-ctr{
+      text-align:center;
+      font-family:var(--mono);
+      font-size:.73rem;
+      color:var(--dim);
+      margin-top:8px;
+      padding:5px;
+      background:var(--surf2);
+      border-radius:5px;
+    }
+
+    .step-ctr em{
+      color:var(--accent);
+      font-style:normal;
+      font-weight:700;
+    }
+
+    .stats-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+    }
+
+    .stat-card{
+      background:var(--surf2);
+      border:1px solid var(--border);
+      border-radius:7px;
+      padding:9px 11px;
+      text-align:center;
+    }
+
+    .stat-val{
+      font-family:var(--mono);
+      font-size:1.25rem;
+      font-weight:700;
+      color:var(--accent);
+      line-height:1;
+    }
+
+    .stat-lbl{
+      font-size:.58rem;
+      color:var(--muted);
+      margin-top:3px;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+
+    .pq-wrap{
+      display:flex;
+      flex-wrap:wrap;
+      gap:5px;
+      min-height:36px;
+    }
+
+    .pq-item{
+      background:var(--surf3);
+      border:1px solid var(--border);
+      border-radius:5px;
+      padding:4px 9px;
+      font-family:var(--mono);
+      font-size:.7rem;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      transition:all .3s;
+    }
+
+    .pq-item.min{
+      border-color:var(--accent);
+      color:var(--accent);
+      background:rgba(0,201,160,.1);
+    }
+
+    .pq-node{
+      font-weight:700;
+      font-size:.82rem;
+    }
+
+    .pq-key{
+      color:var(--muted);
+      font-size:.6rem;
+    }
+
+    .step-box{
+      background:var(--surf2);
+      border:1px solid var(--border);
+      border-left:3px solid var(--accent);
+      border-radius:7px;
+      padding:11px 13px;
+      font-size:.76rem;
+      color:var(--dim);
+      line-height:1.65;
+      min-height:56px;
+      font-family:var(--mono);
+    }
+
+    .step-box b{ color:var(--accent); }
+    .step-box .hi{ color:var(--orange); font-weight:700; }
+    .step-box .ok{ color:var(--green); }
+    .step-box .no{ color:var(--red); }
+
+    .hist-wrap{
+      max-height:180px;
+      overflow-y:auto;
+      border:1px solid var(--border);
+      border-radius:7px;
+    }
+
+    .hist-wrap::-webkit-scrollbar{ width:4px; }
+    .hist-wrap::-webkit-scrollbar-thumb{ background:var(--border); }
+
+    table.hist{
+      width:100%;
+      border-collapse:collapse;
+      font-family:var(--mono);
+      font-size:.67rem;
+    }
+
+    table.hist thead th{
+      background:var(--surf3);
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.05em;
+      padding:5px 9px;
+      text-align:left;
+      font-size:.59rem;
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+
+    table.hist tbody tr{
+      border-top:1px solid var(--border);
+      cursor:pointer;
+      transition:background .12s;
+    }
+
+    table.hist tbody tr:hover{ background:var(--surf3); }
+    table.hist tbody tr.active-hist{ background:rgba(0,201,160,.08); }
+
+    table.hist tbody td{
+      padding:4px 9px;
+      color:var(--dim);
+    }
+
+    table.hist tbody td:first-child{ color:var(--muted); }
+    .tc-edge{ color:var(--accent) !important; }
+    .tc-wt{ color:var(--yellow) !important; }
+
+    .legend-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:9px;
+    }
+
+    .leg-item{
+      display:flex;
+      align-items:center;
+      gap:5px;
+      font-size:.67rem;
+      color:var(--dim);
+    }
+
+    .leg-dot{
+      width:11px;
+      height:11px;
+      border-radius:50%;
+      flex-shrink:0;
+      border:2px solid;
+    }
+
+    .leg-line{
+      width:18px;
+      height:3px;
+      flex-shrink:0;
+      border-radius:2px;
+    }
+
+    /* ───────────────── RIGHT PANEL ───────────────── */
+    .right{
+      display:flex;
+      flex-direction:column;
+      background:var(--bg);
+      overflow:hidden;
+    }
+
+    .viz{
+      flex:1;
+      position:relative;
+      min-height:0;
+    }
+
+    #graph-svg{
+      width:100%;
+      height:100%;
+      display:block;
+    }
+
+    /* ───────────────── BOTTOM TABS ───────────────── */
+    .btabs{
+      background:var(--surf1);
+      border-top:1px solid var(--border);
+      display:flex;
+      flex-direction:column;
+      height:320px;
+    }
+
+    .tab-bar{
+      display:flex;
+      border-bottom:1px solid var(--border);
+      flex-shrink:0;
+      flex-wrap:wrap;
+    }
+
+    .tbtn{
+      padding:8px 16px;
+      font-size:.7rem;
+      font-weight:700;
+      letter-spacing:.04em;
+      cursor:pointer;
+      border:none;
+      background:transparent;
+      color:var(--muted);
+      border-bottom:2px solid transparent;
+      transition:all .15s;
+      text-transform:uppercase;
+    }
+
+    .tbtn.active{
+      color:var(--accent);
+      border-bottom-color:var(--accent);
+    }
+
+    .tbtn:hover:not(.active){ color:var(--dim); }
+
+    .tcontent{
+      flex:1;
+      overflow-y:auto;
+      padding:12px 15px;
+      display:none;
+    }
+
+    .tcontent.active{ display:block; }
+
+    .tcontent::-webkit-scrollbar{ width:4px; }
+    .tcontent::-webkit-scrollbar-thumb{ background:var(--border); }
+
+    /* PSEUDOCODE */
+    .pseudo-wrap{
+      font-family:var(--mono);
+      font-size:.73rem;
+      line-height:1.9;
+    }
+
+    .pline{
+      display:flex;
+      gap:11px;
+      padding:2px 7px;
+      border-radius:4px;
+      cursor:pointer;
+      transition:background .12s;
+      position:relative;
+    }
+
+    .pline:hover{ background:var(--surf3); }
+
+    .pline.hl{
+      background:rgba(0,201,160,.12);
+      border-left:3px solid var(--accent);
+    }
+
+    .pnum{
+      color:var(--muted);
+      min-width:20px;
+      text-align:right;
+      user-select:none;
+    }
+
+    .pcode{ color:var(--dim); }
+    .kw{ color:var(--purple); font-weight:600; }
+    .fn{ color:var(--blue); }
+    .cm{ color:var(--muted); font-style:italic; }
+    .nv{ color:var(--yellow); }
+    .vr{ color:var(--orange); }
+
+    .tip{
+      display:none;
+      position:absolute;
+      left:100%;
+      top:0;
+      background:var(--surf3);
+      border:1px solid var(--border);
+      border-radius:7px;
+      padding:7px 11px;
+      font-size:.67rem;
+      color:var(--dim);
+      width:210px;
+      z-index:99;
+      pointer-events:none;
+      line-height:1.5;
+      box-shadow:0 8px 24px rgba(0,0,0,.5);
+    }
+
+    .pline:hover .tip{ display:block; }
+
+    /* COMPLEXITY */
+    .cx-cards{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:7px;
+      margin-bottom:10px;
+    }
+
+    .cx-card{
+      background:var(--surf2);
+      border:1px solid var(--border);
+      border-radius:7px;
+      padding:9px 11px;
+      text-align:center;
+    }
+
+    .cx-card .cxlbl{
+      font-size:.59rem;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.07em;
+      margin-bottom:3px;
+    }
+
+    .cx-card .cxval{
+      font-family:var(--mono);
+      font-size:.83rem;
+      font-weight:700;
+    }
+
+    .cxt-prim .cxval{ color:var(--accent); }
+    .cxt-space .cxval{ color:var(--orange); }
+    .cxt-krus .cxval{ color:var(--purple); }
+    .cxt-case .cxval{ color:var(--yellow); }
+
+    .n-row{
+      display:flex;
+      align-items:center;
+      gap:9px;
+      font-size:.71rem;
+      color:var(--dim);
+      margin-bottom:7px;
+    }
+
+    .n-row span{
+      font-family:var(--mono);
+      color:var(--accent);
+      font-weight:700;
+      min-width:30px;
+    }
+
+    #gc{
+      width:100%;
+      height:155px;
+      border-radius:7px;
+      background:var(--surf2);
+      border:1px solid var(--border);
+      display:block;
+    }
+
+    .gc-legend{
+      font-size:.63rem;
+      color:var(--muted);
+      margin-top:5px;
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .gc-legend span{
+      display:flex;
+      align-items:center;
+      gap:4px;
+    }
+
+    .gc-legend span::before{
+      content:'';
+      display:inline-block;
+      width:16px;
+      height:3px;
+      border-radius:2px;
+    }
+
+    .gcl-p::before{ background:var(--accent); }
+    .gcl-k::before{ background:var(--purple); }
+    .gcl-n::before{ background:var(--orange); }
+
+    /* EDUCATION */
+    .edu{ line-height:1.75; }
+
+    details.coll{
+      background:var(--surf2);
+      border:1px solid var(--border);
+      border-radius:7px;
+      margin-bottom:9px;
+      overflow:hidden;
+    }
+
+    details.coll summary{
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:.8rem;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      gap:7px;
+      list-style:none;
+      user-select:none;
+    }
+
+    details.coll summary::before{
+      content:'▶';
+      font-size:.58rem;
+      color:var(--accent);
+      transition:transform .2s;
+    }
+
+    details.coll[open] summary::before{ transform:rotate(90deg); }
+
+    .edu-body{
+      padding:0 14px 12px;
+      font-size:.74rem;
+      color:var(--dim);
+    }
+
+    .edu-body p{ margin-bottom:7px; }
+
+    .kbox{
+      background:rgba(0,201,160,.07);
+      border:1px solid rgba(0,201,160,.2);
+      border-radius:7px;
+      padding:9px 13px;
+      margin:7px 0;
+      font-size:.73rem;
+    }
+
+    .kbox strong{
+      color:var(--accent);
+      display:block;
+      margin-bottom:3px;
+    }
+
+    .mbox{
+      background:rgba(240,81,81,.07);
+      border:1px solid rgba(240,81,81,.2);
+      border-radius:7px;
+      padding:9px 13px;
+      margin:7px 0;
+      font-size:.73rem;
+    }
+
+    .mbox strong{
+      color:var(--red);
+      display:block;
+      margin-bottom:3px;
+    }
+
+    /* COMPARISON */
+    .cmp-wrap{
+      font-size:.74rem;
+      color:var(--dim);
+      line-height:1.7;
+    }
+
+    .cmp-cols{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:10px;
+    }
+
+    .cmp-col{
+      background:var(--surf2);
+      border-radius:7px;
+      padding:11px;
+    }
+
+    .cmp-col .cmp-hd{
+      font-weight:700;
+      font-size:.8rem;
+      margin-bottom:7px;
+    }
+
+    .cmp-note{
+      background:rgba(245,166,35,.07);
+      border:1px solid rgba(245,166,35,.2);
+      border-radius:7px;
+      padding:10px 13px;
+    }
+
+    .cmp-note strong{
+      color:var(--yellow);
+      display:block;
+      margin-bottom:5px;
+    }
+
+    .mini-table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:8px;
+      font-size:.72rem;
+      font-family:var(--mono);
+    }
+
+    .mini-table th, .mini-table td{
+      border:1px solid var(--border);
+      padding:6px 8px;
+      text-align:left;
+    }
+
+    .mini-table th{
+      background:var(--surf3);
+      color:var(--muted);
+      text-transform:uppercase;
+      font-size:.62rem;
+    }
+
+    .mini-table td{ color:var(--dim); }
+
+    /* SVG labels */
+    .nl{
+      fill:var(--text);
+      font-family:'Segoe UI',sans-serif;
+      font-weight:700;
+      font-size:14px;
+      text-anchor:middle;
+      dominant-baseline:middle;
+      pointer-events:none;
+    }
+
+    .ew{
+      fill:var(--dim);
+      font-family:var(--mono);
+      font-size:11px;
+      text-anchor:middle;
+      dominant-baseline:middle;
+      pointer-events:none;
+    }
+  </style>
+</head>
+<body>
+  <!-- ═════════════ HEADER ═════════════ -->
+  <header>
+    <h1>Prim's <span>MST</span> Visualizer</h1>
+    <p>Name: Fasmin Nizar Id: 20230003378  BCS 309 Algorithms</p>
+    <div class="hdr-right">
+      Step <span id="hdr-s">0</span> / <span id="hdr-t">0</span>
+      <div id="status-pill" class="status-pill sp-idle">Idle</div>
+    </div>
+  </header>
+
+  <div class="main">
+    <!-- ═════════════ LEFT PANEL ═════════════ -->
+    <div class="left">
+
+      <!-- INPUT -->
+      <div class="sec">
+        <div class="sec-lbl">Graph Input</div>
+        <textarea id="custom-input">A B 4
+A C 2
+B C 1
+B D 5
+C D 8
+C E 10
+D E 2
+D F 6
+E F 3</textarea>
+        <div class="hint">Format: vertex1 vertex2 weight (one edge per line)</div>
+        <div class="sv-row">
+          <label>Start vertex:</label>
+          <select id="sv-sel" class="sml"></select>
+          <button class="load-btn" onclick="loadCustom()">Load</button>
+        </div>
+      </div>
+
+      <!-- PRESETS -->
+      <div class="sec">
+        <div class="sec-lbl">Preset Graphs</div>
+        <div class="presets">
+          <button class="pre-btn" onclick="loadPreset('simple')">Simple Graph<span class="pre-tag">6 nodes · 9 edges</span></button>
+          <button class="pre-btn" onclick="loadPreset('clrs')">CLRS Textbook<span class="pre-tag">9 nodes · classic</span></button>
+          <button class="pre-btn" onclick="loadPreset('dense')">Dense Graph<span class="pre-tag">8 nodes · many edges</span></button>
+          <button class="pre-btn" onclick="loadPreset('sparse')">Sparse / Worst<span class="pre-tag">linear chain</span></button>
+        </div>
+      </div>
+
+      <!-- SPEED -->
+      <div class="sec">
+        <div class="sec-lbl">Animation Speed</div>
+        <div class="spd-row">
+          <label>Speed</label>
+          <input type="range" id="speed" min="0.25" max="4" step="0.25" value="1" oninput="onSpeed()">
+          <div class="spd-val" id="spd-val">1×</div>
+        </div>
+      </div>
+
+      <!-- CONTROLS -->
+      <div class="sec">
+        <div class="sec-lbl">Playback</div>
+        <div class="ctrl-grid">
+          <button class="cbtn cbtn-primary" id="btn-build" onclick="buildSteps()">⚙ Build</button>
+          <button class="cbtn cbtn-sec" id="btn-step" onclick="doStep()" disabled>→ Step</button>
+          <button class="cbtn cbtn-sec" id="btn-play" onclick="playPause()" disabled>▶ Play</button>
+          <button class="cbtn cbtn-danger" id="btn-reset" onclick="doReset()">↺ Reset</button>
+        </div>
+        <div class="step-ctr">Step <em id="sc-cur">0</em> / <em id="sc-max">0</em></div>
+      </div>
+
+      <!-- STATS -->
+      <div class="sec">
+        <div class="sec-lbl">Statistics</div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-val" id="st-ext">0</div><div class="stat-lbl">Extract-Min</div></div>
+          <div class="stat-card"><div class="stat-val" id="st-rel">0</div><div class="stat-lbl">Relaxations</div></div>
+          <div class="stat-card"><div class="stat-val" id="st-cmp">0</div><div class="stat-lbl">Comparisons</div></div>
+          <div class="stat-card"><div class="stat-val" id="st-wt">—</div><div class="stat-lbl">MST Weight</div></div>
+        </div>
+      </div>
+
+      <!-- PQ -->
+      <div class="sec">
+        <div class="sec-lbl">Priority Queue (Min-Heap)</div>
+        <div class="pq-wrap" id="pq-display">
+          <span style="color:var(--muted);font-size:.71rem;font-family:var(--mono)">Build steps to populate</span>
+        </div>
+      </div>
+
+      <!-- STEP EXPLANATION -->
+      <div class="sec">
+        <div class="sec-lbl">Current Step</div>
+        <div class="step-box" id="step-box">Press <b>Build Steps</b> to initialize, then use <b>Step</b> or <b>Play</b>.</div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="sec">
+        <div class="sec-lbl">Step History (click to jump)</div>
+        <div class="hist-wrap">
+          <table class="hist">
+            <thead>
+              <tr><th>#</th><th>Action</th><th>Edge</th><th>Weight</th></tr>
+            </thead>
+            <tbody id="hist-body">
+              <tr><td colspan="4" style="text-align:center;padding:10px;color:var(--muted)">No history yet</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- LEGEND -->
+      <div class="sec">
+        <div class="sec-lbl">Legend</div>
+        <div class="legend-row">
+          <div class="leg-item"><div class="leg-dot" style="border-color:var(--accent);background:rgba(0,201,160,.18)"></div>In MST</div>
+          <div class="leg-item"><div class="leg-dot" style="border-color:var(--orange);background:rgba(255,107,53,.18)"></div>Current</div>
+          <div class="leg-item"><div class="leg-dot" style="border-color:var(--yellow);background:rgba(245,166,35,.15)"></div>Candidate</div>
+          <div class="leg-item"><div class="leg-dot" style="border-color:var(--border);background:var(--surf3)"></div>Unvisited</div>
+          <div class="leg-item"><div class="leg-line" style="background:var(--accent)"></div>MST Edge</div>
+          <div class="leg-item"><div class="leg-line" style="background:var(--orange)"></div>Examining</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═════════════ RIGHT PANEL ═════════════ -->
+    <div class="right">
+      <div class="viz">
+        <svg id="graph-svg"></svg>
+      </div>
+
+      <!-- BOTTOM TABS -->
+      <div class="btabs">
+        <div class="tab-bar">
+          <button class="tbtn active" onclick="switchTab('pseudo',this)">Pseudocode</button>
+          <button class="tbtn" onclick="switchTab('complex',this)">Complexity</button>
+          <button class="tbtn" onclick="switchTab('edu',this)">Education</button>
+          <button class="tbtn" onclick="switchTab('cmp',this)">Comparison</button>
+        </div>
+
+        <!-- PSEUDOCODE -->
+        <div class="tcontent active" id="tab-pseudo">
+          <div class="pseudo-wrap" id="pseudocode"></div>
+        </div>
+
+        <!-- COMPLEXITY -->
+        <div class="tcontent" id="tab-complex">
+          <div class="cx-cards">
+            <div class="cx-card cxt-prim"><div class="cxlbl">Prim's (Binary Heap)</div><div class="cxval">O(E log V)</div></div>
+            <div class="cx-card cxt-case"><div class="cxlbl">Best / Avg / Worst</div><div class="cxval">O(E log V)</div></div>
+            <div class="cx-card cxt-space"><div class="cxlbl">Space</div><div class="cxval">O(V + E)</div></div>
+            <div class="cx-card cxt-krus"><div class="cxlbl">Kruskal's Time</div><div class="cxval">O(E log E)</div></div>
+          </div>
+
+          <div style="margin-bottom:10px;font-size:.74rem;color:var(--dim);line-height:1.7;background:var(--surf2);border:1px solid var(--border);padding:10px 12px;border-radius:7px">
+            <b style="color:var(--accent)">Why best = average = worst here:</b><br>
+            With a binary heap, Prim’s still performs heap operations for vertices and edge checks for adjacency lists.
+            So in practice, the asymptotic complexity remains <b style="color:var(--accent)">O(E log V)</b> in all three cases.
+          </div>
+
+          <div class="n-row">
+            <label>Vertices (V):</label>
+            <input type="range" id="n-slider" min="4" max="100" step="2" value="20" oninput="drawGC()">
+            <span id="n-val">20</span>
+          </div>
+
+          <canvas id="gc"></canvas>
+          <div class="gc-legend">
+            <span class="gcl-p">Prim's O(E log V)</span>
+            <span class="gcl-k">Kruskal's O(E log E)</span>
+            <span class="gcl-n">Naïve O(V²)</span>
+          </div>
+        </div>
+
+        <!-- EDUCATION -->
+        <div class="tcontent" id="tab-edu">
+          <div class="edu">
+
+            <details class="coll" open>
+              <summary>What is Prim's Algorithm?</summary>
+              <div class="edu-body">
+                <p>Prim's algorithm (1957) builds a <b style="color:var(--accent)">Minimum Spanning Tree (MST)</b> — a subset of edges that connects all vertices with minimum total weight and no cycles.</p>
+                <p>It <b style="color:var(--orange)">grows from a single start vertex</b>, always choosing the cheapest edge that crosses from the current tree into an unvisited vertex.</p>
+                <div class="kbox">
+                  <strong>🔑 Design Paradigm: Greedy</strong>
+                  Prim’s is a <b>Greedy Algorithm</b> because at every step it makes the locally best choice:
+                  it always adds the cheapest safe edge that expands the current MST.
+                </div>
+                <div class="kbox">
+                  <strong>🔑 Greedy Choice (Cut Property)</strong>
+                  For any partition of vertices into two sets, the minimum-weight crossing edge is always safe to include in some MST.
+                  Prim's uses this idea at every step.
+                </div>
+              </div>
+            </details>
+
+            <details class="coll">
+              <summary>Step-by-Step Walkthrough</summary>
+              <div class="edu-body">
+                <p>1. Set key[start] = 0, all others = ∞. Set parent = NIL for all.</p>
+                <p>2. Insert all vertices into a min-priority queue keyed by key[].</p>
+                <p>3. While PQ is not empty:</p>
+                <p>&nbsp;&nbsp;a. Extract-Min: pull vertex u with smallest key — O(log V)</p>
+                <p>&nbsp;&nbsp;b. Mark u as in-MST.</p>
+                <p>&nbsp;&nbsp;c. For each neighbor v of u: if v ∉ MST and w(u,v) &lt; key[v], do decrease-key: key[v] = w(u,v), parent[v] = u.</p>
+
+                <div class="kbox">
+                  <strong>⚡ Complexity Breakdown</strong>
+                  V Extract-Min operations × O(log V) + up to E decrease-key operations × O(log V)
+                  = <span style="color:var(--accent)">O(E log V)</span>.
+                </div>
+
+                <div class="kbox">
+                  <strong>🔎 Sorting / Searching Connection</strong>
+                  Prim’s is not a sorting algorithm, but it depends on a <b>search structure</b>:
+                  the <b>min-priority queue (heap)</b>.
+                  This heap continuously “searches” for the smallest key using <b>Extract-Min</b>.
+                  Without this structure, the algorithm becomes slower (naïve version ≈ O(V²)).
+                </div>
+              </div>
+            </details>
+
+            <details class="coll">
+              <summary>Fully Worked Example</summary>
+              <div class="edu-body">
+                <p><b style="color:var(--text)">Graph:</b> A–B(4), A–C(2), B–C(1), B–D(5), C–D(8), D–E(2)</p>
+                <p><b style="color:var(--accent)">Init:</b> keys = {A:0, B:∞, C:∞, D:∞, E:∞}</p>
+                <p><b style="color:var(--orange)">Extract A</b> → neighbors: set B→4, C→2</p>
+                <p><b style="color:var(--orange)">Extract C</b> → B→min(4,1)=1 ✓ decrease-key, D→8</p>
+                <p><b style="color:var(--orange)">Extract B</b> → D→min(8,5)=5 ✓ decrease-key</p>
+                <p><b style="color:var(--orange)">Extract D</b> → E→2</p>
+                <p><b style="color:var(--orange)">Extract E</b></p>
+                <p><b style="color:var(--green)">MST:</b> A–C(2) + C–B(1) + B–D(5) + D–E(2) = <b style="color:var(--accent)">10</b></p>
+              </div>
+            </details>
+
+            <details class="coll">
+              <summary>Common Mistakes to Avoid</summary>
+              <div class="edu-body">
+                <div class="mbox">
+                  <strong>❌ Picking globally cheapest edge</strong>
+                  That’s Kruskal’s behavior, not Prim’s.
+                  Prim’s only chooses edges crossing from the <b>current tree</b> to the outside.
+                </div>
+                <div class="mbox">
+                  <strong>❌ Skipping decrease-key updates</strong>
+                  If a cheaper connection is found, the key must be updated.
+                  Otherwise the MST can be wrong.
+                </div>
+                <div class="mbox">
+                  <strong>❌ Re-processing MST vertices</strong>
+                  Once extracted, a vertex is permanently in the MST and should not be updated again.
+                </div>
+              </div>
+            </details>
+
+            <details class="coll">
+              <summary>Worst-Case Preset Explanation</summary>
+              <div class="edu-body">
+                <p>The <b style="color:var(--orange)">Sparse / Worst</b> preset is included to demonstrate a graph where Prim’s still must process many heap operations with little shortcut advantage.</p>
+                <p>Even though Prim’s remains correct, sparse graphs highlight that edge availability is limited, so the algorithm often progresses in a narrow step-by-step manner.</p>
+                <div class="kbox">
+                  <strong>Why it matters</strong>
+                  This helps visualize how Prim’s behaves differently depending on graph density.
+                </div>
+              </div>
+            </details>
+
+          </div>
+        </div>
+
+        <!-- COMPARISON -->
+        <div class="tcontent" id="tab-cmp">
+          <div class="cmp-wrap">
+
+            <div class="cmp-cols">
+              <div class="cmp-col" style="border:1px solid rgba(0,201,160,.3)">
+                <div class="cmp-hd" style="color:var(--accent)">Prim's Algorithm</div>
+                <div>✓ Grows from a single vertex</div>
+                <div>✓ Greedy expansion of current tree</div>
+                <div>✓ Uses <b style="color:var(--accent)">Extract-Min</b> and <b>Decrease-Key</b></div>
+                <div>✓ Best on <b style="color:var(--accent)">dense</b> graphs</div>
+                <div>✓ O(E log V) with binary heap</div>
+                <div style="color:var(--muted)">✗ Slightly harder to implement</div>
+              </div>
+
+              <div class="cmp-col" style="border:1px solid rgba(155,114,239,.3)">
+                <div class="cmp-hd" style="color:var(--purple)">Kruskal's Algorithm</div>
+                <div>✓ Processes edges globally</div>
+                <div>✓ Greedy by globally smallest edges</div>
+                <div>✓ Uses sorting + Union-Find</div>
+                <div>✓ Best on <b style="color:var(--purple)">sparse</b> graphs</div>
+                <div>✓ O(E log E)</div>
+                <div style="color:var(--muted)">✗ Must sort all edges first</div>
+              </div>
+            </div>
+
+            <div class="cmp-note">
+              <strong>Compare with Kruskal on the Same Graph</strong>
+              <div>• <b style="color:var(--accent)">Prim’s:</b> starts at one chosen vertex and expands outward.</div>
+              <div>• <b style="color:var(--purple)">Kruskal’s:</b> sorts all edges globally and picks the smallest safe ones.</div>
+              <div>• Both can produce the same total MST weight, but they may choose edges in a different order.</div>
+            </div>
+
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>Aspect</th>
+                  <th>Prim's</th>
+                  <th>Kruskal's</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Greedy Choice</td>
+                  <td>Cheapest crossing edge</td>
+                  <td>Cheapest global safe edge</td>
+                </tr>
+                <tr>
+                  <td>Main Data Structure</td>
+                  <td>Min-Heap / PQ</td>
+                  <td>Sorted Edge List + Union-Find</td>
+                </tr>
+                <tr>
+                  <td>Sorting / Searching Role</td>
+                  <td>Heap-based search for min key</td>
+                  <td>Explicit edge sorting</td>
+                </tr>
+                <tr>
+                  <td>Dense Graphs</td>
+                  <td>Usually better</td>
+                  <td>Usually less ideal</td>
+                </tr>
+                <tr>
+                  <td>Sparse Graphs</td>
+                  <td>Good</td>
+                  <td>Often very good</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="margin-top:10px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;padding:11px">
+              <div style="color:var(--orange);font-weight:700;margin-bottom:5px;font-size:.78rem">Why Greedy Works: The Cut Property</div>
+              <div>
+                For any cut (partition of vertices into two sets S and V−S), the minimum-weight edge crossing the cut is always safe to add to an MST.
+                Prim’s maintains exactly that cut between the current MST and the unvisited vertices.
+              </div>
+            </div>
+
+            <div style="margin-top:10px;background:rgba(240,81,81,.07);border:1px solid rgba(240,81,81,.2);border-radius:7px;padding:11px">
+              <div style="color:var(--red);font-weight:700;margin-bottom:5px;font-size:.78rem">What if we remove the heap-based searching step?</div>
+              <div>
+                If we remove the min-priority queue, Prim’s must repeatedly scan all vertices to find the minimum key.
+                The algorithm still works, but becomes slower — approximately <b style="color:var(--orange)">O(V²)</b> instead of <b style="color:var(--accent)">O(E log V)</b>.
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ══════════════════════════════════════════════
+    // PRESETS
+    // ══════════════════════════════════════════════
+    const PRESETS = {
+      simple: {
+        start:'A',
+        edges:[
+          ['A','B',4],['A','C',2],['B','C',1],['B','D',5],
+          ['C','D',8],['C','E',10],['D','E',2],['D','F',6],['E','F',3]
+        ]
+      },
+      clrs: {
+        start:'a',
+        edges:[
+          ['a','b',4],['a','h',8],['b','c',8],['b','h',11],
+          ['c','d',7],['c','f',4],['c','i',2],['d','e',9],
+          ['d','f',14],['e','f',10],['f','g',2],['g','h',1],
+          ['g','i',6],['h','i',7]
+        ]
+      },
+      dense: {
+        start:'A',
+        edges:[
+          ['A','B',3],['A','C',5],['A','D',1],['A','E',9],['A','H',8],
+          ['B','C',2],['B','D',8],['B','E',4],['B','F',7],
+          ['C','D',6],['C','E',3],['C','F',5],
+          ['D','E',2],['D','F',9],['D','G',1],
+          ['E','F',4],['E','G',7],
+          ['F','G',3],['F','H',6],
+          ['G','H',2]
+        ]
+      },
+      sparse: {
+        start:'1',
+        edges:[
+          ['1','2',1],['2','3',2],['3','4',3],['4','5',4],['5','6',5],['6','7',6]
+        ]
+      }
+    };
+
+    // ══════════════════════════════════════════════
+    // STATE
+    // ══════════════════════════════════════════════
+    let G = { verts:[], adj:{}, rawEdges:[] };
+    let STEPS = [];
+    let curStep = -1;
+    let playTimer = null;
+    let animSpeed = 1;
+    let nodePos = {};
+    let histArray = [];
+
+    // ══════════════════════════════════════════════
+    // PSEUDOCODE
+    // ══════════════════════════════════════════════
+    const PLINES = [
+      { c:'<span class="kw">PRIM</span>(G, w, r):', t:'Entry: G = graph, w = weight function, r = start vertex' },
+      { c:'<span class="kw">for</span> each <span class="vr">u</span> ∈ G.V:', t:'Loop over every vertex to initialize arrays' },
+      { c:'&nbsp;&nbsp;key[<span class="vr">u</span>] ← ∞', t:'Every vertex starts unreachable (infinity)' },
+      { c:'&nbsp;&nbsp;π[<span class="vr">u</span>] ← NIL', t:'No parent edge yet in the MST' },
+      { c:'key[<span class="vr">r</span>] ← <span class="nv">0</span>', t:'Start vertex gets 0 so it is chosen first' },
+      { c:'Q ← <span class="fn">BUILD-MIN-HEAP</span>(G.V)', t:'Priority queue stores all vertices by key[]' },
+      { c:'<span class="kw">while</span> Q ≠ ∅:', t:'Continue until all vertices are extracted' },
+      { c:'&nbsp;&nbsp;<span class="vr">u</span> ← <span class="fn">EXTRACT-MIN</span>(Q)', t:'Remove the vertex with the smallest current key' },
+      { c:'&nbsp;&nbsp;<span class="kw">for</span> <span class="vr">v</span> ∈ G.Adj[<span class="vr">u</span>]:', t:'Check all neighbors of u' },
+      { c:'&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> <span class="vr">v</span> ∈ Q <span class="kw">and</span> w(<span class="vr">u</span>,<span class="vr">v</span>) &lt; key[<span class="vr">v</span>]:', t:'If this edge gives a cheaper connection, relax it' },
+      { c:'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;π[<span class="vr">v</span>] ← <span class="vr">u</span>', t:'Set u as parent of v in the MST' },
+      { c:'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;key[<span class="vr">v</span>] ← w(<span class="vr">u</span>,<span class="vr">v</span>)', t:'Decrease-key: update priority in heap' },
+      { c:'<span class="cm">// MST = { (π[v],v) : v ≠ r }</span>', t:'The parent array encodes the final MST edges' },
+    ];
+
+    function renderPseudo() {
+      document.getElementById('pseudocode').innerHTML = PLINES.map((l,i) => `
+        <div class="pline" id="pl${i}">
+          <span class="pnum">${i+1}</span>
+          <span class="pcode">${l.c}</span>
+          <div class="tip">${l.t}</div>
+        </div>
+      `).join('');
+    }
+
+    function hlLine(n) {
+      document.querySelectorAll('.pline').forEach(el => el.classList.remove('hl'));
+      if (n >= 0) {
+        const el = document.getElementById('pl' + n);
+        if (el) {
+          el.classList.add('hl');
+          el.scrollIntoView({ block:'nearest', behavior:'smooth' });
+        }
+      }
+    }
+
+    // ══════════════════════════════════════════════
+    // PARSE & BUILD GRAPH
+    // ══════════════════════════════════════════════
+    function parseEdges(txt) {
+      return txt.trim().split('\n').flatMap(line => {
+        const p = line.trim().split(/\s+/);
+        if (p.length >= 3 && !isNaN(+p[2])) return [[p[0], p[1], +p[2]]];
+        return [];
+      });
+    }
+
+    function buildGraph(edges) {
+      const vSet = new Set();
+      edges.forEach(([u,v]) => { vSet.add(u); vSet.add(v); });
+
+      const verts = [...vSet];
+      const adj = {};
+      verts.forEach(v => adj[v] = []);
+
+      edges.forEach(([u,v,w]) => {
+        adj[u].push({to:v,w});
+        adj[v].push({to:u,w});
+      });
+
+      return { verts, adj, rawEdges: edges };
+    }
+
+    function loadPreset(name) {
+      const p = PRESETS[name];
+      document.getElementById('custom-input').value = p.edges.map(([u,v,w]) => `${u} ${v} ${w}`).join('\n');
+      loadCustom(p.start);
+    }
+
+    function loadCustom(forceStart) {
+      const edges = parseEdges(document.getElementById('custom-input').value);
+      if (!edges.length) {
+        alert('No valid edges found.');
+        return;
+      }
+
+      G = buildGraph(edges);
+      nodePos = {};
+
+      const sel = document.getElementById('sv-sel');
+      sel.innerHTML = G.verts.map(v => `<option>${v}</option>`).join('');
+      if (forceStart && G.verts.includes(forceStart)) sel.value = forceStart;
+
+      doReset();
+      drawGraph({}, [], null, null, null);
+      setStatus('ready');
+    }
+
+    // ══════════════════════════════════════════════
+    // LAYOUT
+    // ══════════════════════════════════════════════
+    function getLayout() {
+      const svg = document.getElementById('graph-svg');
+      const W = svg.clientWidth || 700;
+      const H = svg.clientHeight || 400;
+      const cx = W / 2;
+      const cy = H / 2;
+      const r = Math.min(W,H) * 0.36;
+      const pos = {};
+
+      G.verts.forEach((v,i) => {
+        const a = (2 * Math.PI * i / G.verts.length) - Math.PI / 2;
+        pos[v] = {
+          x: cx + r * Math.cos(a),
+          y: cy + r * Math.sin(a)
+        };
+      });
+
+      return pos;
+    }
+
+    // ══════════════════════════════════════════════
+    // DRAW GRAPH
+    // ══════════════════════════════════════════════
+    function drawGraph(inMST, mstEdgeList, curV, examV, curEdge) {
+      if (!G.verts.length) return;
+      if (!Object.keys(nodePos).length) nodePos = getLayout();
+
+      const pos = nodePos;
+      const mstSet = new Set(mstEdgeList.map(([u,v]) => [u,v].sort().join('|')));
+      let html = '';
+      const drawn = new Set();
+
+      // edges
+      for (const [u,v,w] of G.rawEdges) {
+        const key = [u,v].sort().join('|');
+        if (drawn.has(key)) continue;
+        drawn.add(key);
+
+        const p1 = pos[u], p2 = pos[v];
+        if (!p1 || !p2) continue;
+
+        const mx = (p1.x + p2.x) / 2;
+        const my = (p1.y + p2.y) / 2;
+
+        const isMST = mstSet.has(key);
+        const isCur = curEdge && [curEdge[0], curEdge[1]].sort().join('|') === key;
+
+        const sc = isCur ? 'var(--orange)' : isMST ? 'var(--accent)' : 'var(--border)';
+        const sw = (isCur || isMST) ? 3.5 : 2;
+        const dash = isCur ? '8,4' : '';
+
+        html += `
+          <line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}"
+                stroke="${sc}" stroke-width="${sw}" ${dash ? `stroke-dasharray="${dash}"` : ''}
+                stroke-linecap="round" style="transition:stroke .25s,stroke-width .25s"/>
+        `;
+
+        const wc = isMST ? 'var(--accent)' : isCur ? 'var(--orange)' : 'var(--muted)';
+        html += `<rect x="${mx-11}" y="${my-8}" width="22" height="16" rx="4" fill="rgba(11,14,20,.88)"/>`;
+        html += `<text x="${mx}" y="${my+1}" class="ew" fill="${wc}" style="transition:fill .25s">${w}</text>`;
+      }
+
+      // nodes
+      for (const v of G.verts) {
+        const p = pos[v];
+        if (!p) continue;
+
+        const isCur = v === curV;
+        const isTree = inMST[v];
+        const isCand = v === examV;
+
+        const fill = isCur ? 'rgba(255,107,53,.22)' :
+                    isTree ? 'rgba(0,201,160,.18)' :
+                    isCand ? 'rgba(245,166,35,.18)' :
+                    'var(--surf3)';
+
+        const stroke = isCur ? 'var(--orange)' :
+                      isTree ? 'var(--accent)' :
+                      isCand ? 'var(--yellow)' :
+                      'var(--border)';
+
+        const sw = (isCur || isTree || isCand) ? 3 : 2;
+        const tc = isCur ? 'var(--orange)' : isTree ? 'var(--accent)' : 'var(--text)';
+
+        html += `<circle cx="${p.x}" cy="${p.y}" r="22" fill="${fill}" stroke="${stroke}" stroke-width="${sw}" style="transition:all .25s"/>`;
+        html += `<text x="${p.x}" y="${p.y+1}" class="nl" fill="${tc}" style="transition:fill .25s">${v}</text>`;
+      }
+
+      document.getElementById('graph-svg').innerHTML = html;
+    }
+
+    // ══════════════════════════════════════════════
+    // COMPUTE PRIM'S STEPS
+    // ══════════════════════════════════════════════
+    function computeSteps(startV) {
+      const steps = [];
+      const { verts, adj } = G;
+
+      const key = {}, par = {}, inM = {};
+      verts.forEach(v => {
+        key[v] = Infinity;
+        par[v] = null;
+        inM[v] = false;
+      });
+
+      key[startV] = 0;
+      let pq = verts.map(v => ({ v, k:key[v] }));
+
+      let ext = 0, rel = 0, cmp = 0;
+      const mstEdges = [];
+
+      steps.push({
+        type:'init',
+        key:{...key},
+        par:{...par},
+        inM:{...inM},
+        pq:pq.map(x => ({...x})),
+        curV:null,
+        examV:null,
+        curEdge:null,
+        mstEdges:[...mstEdges],
+        msg:`<b>Initialization:</b> All keys are set to ∞ except start vertex <span class="hi">${startV}</span>, which gets key = 0. The min-heap is built from these priorities.`,
+        pl:1,
+        stats:{ ext, rel, cmp, wt:0 }
+      });
+
+      while (pq.length) {
+        pq.sort((a,b) => a.k - b.k);
+        const { v:u } = pq.shift();
+
+        inM[u] = true;
+        ext++;
+
+        if (par[u] !== null) {
+          mstEdges.push([par[u], u, key[u]]);
+        }
+
+        const currentWeight = mstEdges.reduce((s,[,,w]) => s + w, 0);
+
+        steps.push({
+          type:'extract',
+          key:{...key},
+          par:{...par},
+          inM:{...inM},
+          pq:pq.map(x => ({...x})),
+          curV:u,
+          examV:null,
+          curEdge:null,
+          mstEdges:[...mstEdges],
+          msg:`<b>Extract-Min:</b> Vertex <span class="hi">${u}</span> is removed from the priority queue because it has the smallest key value (<span class="hi">${key[u] === Infinity ? '∞' : key[u]}</span>). This is the next greedy choice added to the MST.`,
+          pl:7,
+          stats:{ ext, rel, cmp, wt:currentWeight }
+        });
+
+        for (const {to:v, w} of adj[u]) {
+          if (inM[v]) continue;
+
+          cmp++;
+          const inPQ = pq.find(x => x.v === v);
+          if (!inPQ) continue;
+
+          const better = w < key[v];
+
+          steps.push({
+            type:'compare',
+            key:{...key},
+            par:{...par},
+            inM:{...inM},
+            pq:pq.map(x => ({...x})),
+            curV:u,
+            examV:v,
+            curEdge:[u,v,w],
+            mstEdges:[...mstEdges],
+            msg:`<b>Compare / Relaxation Check:</b> We inspect edge <span class="hi">(${u}, ${v})</span> with weight <span class="hi">${w}</span>. Current key[${v}] = <span class="hi">${key[v] === Infinity ? '∞' : key[v]}</span>. ${better ? '<span class="ok">This edge is cheaper, so we will relax it and update the heap.</span>' : '<span class="no">This edge is not cheaper, so no update happens.</span>'}`,
+            pl:9,
+            stats:{ ext, rel, cmp, wt:currentWeight }
+          });
+
+          if (better) {
+            rel++;
+            key[v] = w;
+            par[v] = u;
+            inPQ.k = w;
+
+            steps.push({
+              type:'relax',
+              key:{...key},
+              par:{...par},
+              inM:{...inM},
+              pq:pq.map(x => ({...x})),
+              curV:u,
+              examV:v,
+              curEdge:[u,v,w],
+              mstEdges:[...mstEdges],
+              msg:`<b>Decrease-Key / Relaxation:</b> We found a cheaper way to reach <span class="hi">${v}</span>. So we set parent[${v}] = <span class="hi">${u}</span> and update key[${v}] to <span class="hi">${w}</span>. Its priority in the heap becomes smaller.`,
+              pl:11,
+              stats:{ ext, rel, cmp, wt:currentWeight }
+            });
+          }
+        }
+      }
+
+      const finalWt = mstEdges.reduce((s,[,,w]) => s + w, 0);
+
+      steps.push({
+        type:'done',
+        key:{...key},
+        par:{...par},
+        inM:{...inM},
+        pq:[],
+        curV:null,
+        examV:null,
+        curEdge:null,
+        mstEdges:[...mstEdges],
+        msg:`<b><span class="ok">✓ MST Complete!</span></b> All vertices are connected. Final total MST weight = <span class="hi">${finalWt}</span>.`,
+        pl:12,
+        stats:{ ext, rel, cmp, wt:finalWt }
+      });
+
+      return steps;
+    }
+
+    // ══════════════════════════════════════════════
+    // APPLY STEP
+    // ══════════════════════════════════════════════
+    function applyStep(i) {
+      if (i < 0) {
+        drawGraph({}, [], null, null, null);
+        renderPQ([]);
+        clearStats();
+        return;
+      }
+
+      const s = STEPS[i];
+      drawGraph(s.inM, s.mstEdges, s.curV, s.examV, s.curEdge);
+      renderPQ(s.pq);
+      document.getElementById('step-box').innerHTML = s.msg;
+      hlLine(s.pl);
+      updateStats(s.stats);
+      addHistory(i, s);
+    }
+
+    function buildSteps() {
+      if (!G.verts.length) {
+        loadCustom();
+        return;
+      }
+
+      const sv = document.getElementById('sv-sel').value;
+      if (!G.verts.includes(sv)) {
+        alert('Select a valid start vertex.');
+        return;
+      }
+
+      STEPS = computeSteps(sv);
+      curStep = -1;
+      histArray = [];
+      updateCtrs();
+      setStatus('ready');
+
+      document.getElementById('btn-step').disabled = false;
+      document.getElementById('btn-play').disabled = false;
+      document.getElementById('hist-body').innerHTML =
+        '<tr><td colspan="4" style="text-align:center;padding:8px;color:var(--muted)">No steps taken yet</td></tr>';
+
+      applyStep(-1);
+      document.getElementById('step-box').innerHTML = 'Steps built! Press <b>Step</b> or <b>Play</b>.';
+    }
+
+    function doStep() {
+      if (curStep + 1 >= STEPS.length) return;
+
+      curStep++;
+      applyStep(curStep);
+      updateCtrs();
+
+      if (curStep >= STEPS.length - 1) {
+        setStatus('done');
+        stopPlay();
+      }
+    }
+
+    function playPause() {
+      if (playTimer) {
+        stopPlay();
+        setStatus('paused');
+        return;
+      }
+
+      if (curStep >= STEPS.length - 1) return;
+
+      setStatus('playing');
+      document.getElementById('btn-play').textContent = '⏸ Pause';
+
+      playTimer = setInterval(() => {
+        doStep();
+        if (curStep >= STEPS.length - 1) {
+          stopPlay();
+          setStatus('done');
+        }
+      }, 800 / animSpeed);
+    }
+
+    function stopPlay() {
+      if (playTimer) {
+        clearInterval(playTimer);
+        playTimer = null;
+      }
+      document.getElementById('btn-play').textContent = '▶ Play';
+    }
+
+    function doReset() {
+      stopPlay();
+      STEPS = [];
+      curStep = -1;
+      histArray = [];
+      hlLine(-1);
+      updateCtrs();
+
+      setStatus(G.verts.length ? 'ready' : 'idle');
+      document.getElementById('btn-step').disabled = true;
+      document.getElementById('btn-play').disabled = true;
+      document.getElementById('step-box').innerHTML = 'Press <b>Build Steps</b> to initialize.';
+      document.getElementById('hist-body').innerHTML =
+        '<tr><td colspan="4" style="text-align:center;padding:10px;color:var(--muted)">No history yet</td></tr>';
+
+      clearStats();
+      renderPQ([]);
+      if (G.verts.length) drawGraph({}, [], null, null, null);
+    }
+
+    function jumpToStep(i) {
+      stopPlay();
+      curStep = i;
+      applyStep(i);
+      updateCtrs();
+
+      if (i >= STEPS.length - 1) setStatus('done');
+      else if (i >= 0) setStatus('paused');
+    }
+
+    // ══════════════════════════════════════════════
+    // UI HELPERS
+    // ══════════════════════════════════════════════
+    function updateCtrs() {
+      const c = Math.max(0, curStep);
+      const m = Math.max(0, STEPS.length - 1);
+      document.getElementById('sc-cur').textContent = c;
+      document.getElementById('sc-max').textContent = m;
+      document.getElementById('hdr-s').textContent = c;
+      document.getElementById('hdr-t').textContent = m;
+    }
+
+    function setStatus(s) {
+      const el = document.getElementById('status-pill');
+      el.className = 'status-pill sp-' + s;
+      el.textContent = {
+        idle:'Idle',
+        ready:'Ready',
+        playing:'Playing',
+        paused:'Paused',
+        done:'Done'
+      }[s] || s;
+    }
+
+    function onSpeed() {
+      animSpeed = +document.getElementById('speed').value;
+      document.getElementById('spd-val').textContent = animSpeed + '×';
+      if (playTimer) {
+        stopPlay();
+        playPause();
+      }
+    }
+
+    function renderPQ(pq) {
+      const el = document.getElementById('pq-display');
+      if (!pq.length) {
+        el.innerHTML = '<span style="color:var(--muted);font-size:.71rem;font-family:var(--mono)">Empty</span>';
+        return;
+      }
+
+      const sorted = [...pq].sort((a,b) => a.k - b.k);
+      el.innerHTML = sorted.map((item,i) => {
+        let cls = 'pq-item';
+        if (i === 0) cls += ' min';
+        return `
+          <div class="${cls}">
+            <span class="pq-node">${item.v}</span>
+            <span class="pq-key">${item.k === Infinity ? '∞' : item.k}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function clearStats() {
+      ['st-ext','st-rel','st-cmp'].forEach(id => document.getElementById(id).textContent = '0');
+      document.getElementById('st-wt').textContent = '—';
+    }
+
+    function updateStats(s) {
+      document.getElementById('st-ext').textContent = s.ext;
+      document.getElementById('st-rel').textContent = s.rel;
+      document.getElementById('st-cmp').textContent = s.cmp;
+      document.getElementById('st-wt').textContent = s.wt || '—';
+    }
+
+    function addHistory(idx, s) {
+      const aMap = {
+        init:'Initialize',
+        extract:'Extract-Min',
+        compare:'Compare',
+        relax:'Relax Key',
+        done:'Complete'
+      };
+
+      const edge = s.curEdge ? `${s.curEdge[0]}–${s.curEdge[1]}` :
+                  (s.type === 'extract' && s.curV ? s.curV : '—');
+
+      const wt = s.curEdge ? s.curEdge[2] : '—';
+
+      histArray.push({
+        idx,
+        action:aMap[s.type] || s.type,
+        edge,
+        wt
+      });
+
+      if (histArray.length > 30) histArray.shift();
+
+      const body = document.getElementById('hist-body');
+      body.innerHTML = [...histArray].reverse().map((r,i) => `
+        <tr class="${i === 0 ? 'active-hist' : ''}" onclick="jumpToStep(${r.idx})">
+          <td>${r.idx}</td>
+          <td>${r.action}</td>
+          <td class="tc-edge">${r.edge}</td>
+          <td class="tc-wt">${r.wt}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ══════════════════════════════════════════════
+    // TABS
+    // ══════════════════════════════════════════════
+    function switchTab(name, btn) {
+      document.querySelectorAll('.tcontent').forEach(e => e.classList.remove('active'));
+      document.querySelectorAll('.tbtn').forEach(e => e.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      btn.classList.add('active');
+      if (name === 'complex') setTimeout(drawGC, 50);
+    }
+
+    // ══════════════════════════════════════════════
+    // GROWTH CHART
+    // ══════════════════════════════════════════════
+    function drawGC() {
+      const canvas = document.getElementById('gc');
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      const W = canvas.offsetWidth;
+      const H = canvas.offsetHeight;
+
+      canvas.width = W * devicePixelRatio;
+      canvas.height = H * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+
+      const V = +document.getElementById('n-slider').value;
+      document.getElementById('n-val').textContent = V;
+
+      ctx.clearRect(0,0,W,H);
+      ctx.fillStyle = '#161d2a';
+      ctx.fillRect(0,0,W,H);
+
+      const pad = {l:38,r:14,t:10,b:24};
+      const cW = W - pad.l - pad.r;
+      const cH = H - pad.t - pad.b;
+
+      const pts = 60;
+      const ns = Array.from({length:pts}, (_,i) => Math.max(2, Math.round(2 + (V-2) * i / (pts-1))));
+
+      const fPrim = n => {
+        const E = n * Math.log2(n + 1);
+        return E * Math.log2(n + 1);
+      };
+
+      const fKrus = n => {
+        const E = n * Math.log2(n + 1);
+        return E * Math.log2(E + 1);
+      };
+
+      const fNaive = n => n * n;
+
+      const vals = ns.map(n => [fPrim(n), fKrus(n), fNaive(n)]);
+      const maxV = Math.max(...vals.flat()) || 1;
+
+      const tx = n => pad.l + ((n - 2) / (V - 2 || 1)) * cW;
+      const ty = v => pad.t + (1 - v / maxV) * cH;
+
+      // grid
+      ctx.strokeStyle = '#263045';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = pad.t + (i/4) * cH;
+        ctx.beginPath();
+        ctx.moveTo(pad.l, y);
+        ctx.lineTo(pad.l + cW, y);
+        ctx.stroke();
+      }
+
+      const curves = [
+        {fn:fPrim, color:'#00c9a0'},
+        {fn:fKrus, color:'#9b72ef'},
+        {fn:fNaive, color:'#ff6b35'}
+      ];
+
+      for (const {fn,color} of curves) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ns.forEach((n,i) => {
+          const x = tx(n), y = ty(fn(n));
+          i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        });
+        ctx.stroke();
+      }
+
+      // axes
+      ctx.strokeStyle = '#263045';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(pad.l, pad.t);
+      ctx.lineTo(pad.l, pad.t + cH);
+      ctx.lineTo(pad.l + cW, pad.t + cH);
+      ctx.stroke();
+
+      ctx.fillStyle = '#5a6a84';
+      ctx.font = '10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('2', pad.l, H - 4);
+      ctx.fillText(`V=${V}`, pad.l + cW, H - 4);
+      ctx.textAlign = 'right';
+      ctx.fillText('ops', pad.l - 3, pad.t + 10);
+
+      // marker
+      ctx.strokeStyle = 'rgba(255,255,255,.15)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4,4]);
+      ctx.beginPath();
+      ctx.moveTo(tx(V), pad.t);
+      ctx.lineTo(tx(V), pad.t + cH);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // ══════════════════════════════════════════════
+    // INIT
+    // ══════════════════════════════════════════════
+    window.addEventListener('load', () => {
+      renderPseudo();
+      loadPreset('simple');
+      drawGC();
+
+      window.addEventListener('resize', () => {
+        nodePos = {};
+        if (G.verts.length) {
+          const s = STEPS[curStep];
+          if (s) drawGraph(s.inM, s.mstEdges, s.curV, s.examV, s.curEdge);
+          else drawGraph({}, [], null, null, null);
+        }
+        if (document.getElementById('tab-complex').classList.contains('active')) drawGC();
+      });
+    });
+  </script>
+</body>
+</html>
